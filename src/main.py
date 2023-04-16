@@ -1,64 +1,20 @@
-import snscrape.modules.twitter as sntwitter
+from twitter_scraper import get_tweets
+from text_processing import clean_text, calculate_polarity_score, compound_score, classify_sentiment
 import pandas as pd
-import re
 from transformers import AutoTokenizer
 from transformers import TFRobertaForSequenceClassification
-from scipy.special import softmax
 import time
-
-
-def calculate_polarity_score(tokenizer, model, tweet):
-    encoded_text = tokenizer(tweet, return_tensors='tf')
-    output = model(encoded_text)
-    scores = output[0][0].numpy()
-    scores = softmax(scores)
-    scores_dict = {
-        'negative' : scores[0],
-        'neutral' : scores[1],
-        'positive' : scores[2]
-    }
-    return scores_dict
-
-def preprocess_text(text):
-    text = re.sub(r'@(\w)+', '@user', text)
-    text = re.sub(r'http\S+', 'http', text)
-    return text
-
-def compound_score(row):
-    return row['Positive'] - row['Negative']
-
-def classify_sentiment(compound):
-    if compound >= 0.7:
-        return "Very Positive"
-    elif compound >= 0.3:
-        return "Positive"
-    elif compound > -0.3:
-        return "Neutral"
-    elif compound > -0.7:
-        return "Negative"
-    else:
-        return "Very Negative"
     
-def get_tweets(query, limit):
-    tweets = []
-    num_tweets = 0
-    for tweet in sntwitter.TwitterSearchScraper(query).get_items():
-        tweets.append([tweet.date, tweet.rawContent])
-        num_tweets += 1
-        if num_tweets >= limit:
-            break
-
-    df = pd.DataFrame(tweets, columns=["Date", "Text"])
-    return df
 
 def main():
     KEYWORD = "economy"
-    LIMIT = 1000
+    LIMIT = 10
     LANG = "en"
     QUERY = f"{KEYWORD} lang:{LANG}"
+    PATH_DIR = "data/tweet_sentiment.csv"
 
     df = get_tweets(QUERY, LIMIT)
-    df['Text'] = df['Text'].apply(preprocess_text)
+    df['Text'] = df['Text'].apply(clean_text)
 
     # define model and calculate polarity scores
     MODEL = "cardiffnlp/twitter-roberta-base-sentiment"
@@ -71,7 +27,7 @@ def main():
     df['Sentiment'] = df['Compound'].apply(classify_sentiment)
 
     # Save the dataframe to a CSV file
-    df.to_csv('tweets.csv', index=False)
+    df.to_csv(PATH_DIR, index=False)
 
     # Calculate average data about user sentiment
     avg_sentiment = df['Compound'].mean()
