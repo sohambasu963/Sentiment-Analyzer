@@ -1,4 +1,5 @@
 from twitter_scraper import get_tweets
+from reddit_scraper import get_reddit_posts
 from text_processing import clean_text, calculate_polarity_score, compound_score, classify_sentiment
 import pandas as pd
 from transformers import AutoTokenizer
@@ -7,13 +8,20 @@ import time
     
 
 def main():
-    KEYWORD = "economy"
-    LIMIT = 10
+    KEYWORD = "Canadian economy"
+    LIMIT = 3
     LANG = "en"
-    QUERY = f"{KEYWORD} lang:{LANG}"
+    TWITTER_QUERY = f"{KEYWORD} lang:{LANG}"
+    REDDIT_QUERY = KEYWORD
     PATH_DIR = "data/tweet_sentiment.csv"
 
-    df = get_tweets(QUERY, LIMIT)
+    start_time = time.time()
+    # df = get_tweets(TWITTER_QUERY, LIMIT)
+    df = get_reddit_posts(REDDIT_QUERY, LIMIT)
+    print(df)
+    print(len(df))
+    end_time = time.time()
+    print(f"\nTotal time taken: {end_time - start_time:.2f} seconds")
     df['Text'] = df['Text'].apply(clean_text)
 
     # define model and calculate polarity scores
@@ -43,7 +51,7 @@ def main():
     
 
 if __name__ == "__main__":
-    start_time = time.time()
+    # start_time = time.time()
     main()
-    end_time = time.time()
-    print(f"\nTotal time taken: {end_time - start_time:.2f} seconds")
+    # end_time = time.time()
+    # print(f"\nTotal time taken: {end_time - start_time:.2f} seconds")
